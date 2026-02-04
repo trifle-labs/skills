@@ -1,0 +1,13 @@
+{
+  "name": "good-morning",
+  "version": "1.0.0",
+  "description": "Play the Good Morning (GM) game - creative two-word greetings starting with G and M",
+  "author": "trifle-labs",
+  "license": "MIT",
+  "repository": "https://github.com/trifle-labs/skills",
+  "homepage": "https://github.com/trifle-labs/skills/tree/main/good-morning",
+  "emoji": "🌅",
+  "files": [
+    "SKILL.md"
+  ]
+}
