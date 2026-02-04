@@ -1,0 +1,14 @@
+{
+  "name": "got-it",
+  "version": "1.0.0",
+  "description": "Schelling point coordination game where players converge on a shared word",
+  "author": "trifle-labs",
+  "license": "MIT",
+  "repository": "https://github.com/trifle-labs/skills",
+  "homepage": "https://github.com/trifle-labs/skills/tree/main/got-it",
+  "emoji": "🎯",
+  "files": [
+    "SKILL.md",
+    "references/"
+  ]
+}

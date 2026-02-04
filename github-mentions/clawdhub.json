@@ -1,0 +1,21 @@
+{
+  "name": "github-mentions",
+  "version": "1.0.0",
+  "description": "Monitor and track GitHub mentions across your orgs",
+  "author": "trifle-labs",
+  "license": "MIT",
+  "repository": "https://github.com/trifle-labs/skills",
+  "homepage": "https://github.com/trifle-labs/skills/tree/main/github-mentions",
+  "emoji": "🔔",
+  "requires": {
+    "bins": ["gh", "jq"]
+  },
+  "files": [
+    "github-mentions.sh",
+    "SKILL.md",
+    "README.md"
+  ],
+  "install": {
+    "post": "chmod +x github-mentions.sh"
+  }
+}

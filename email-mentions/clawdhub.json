@@ -1,0 +1,23 @@
+{
+  "name": "email-mentions",
+  "version": "1.0.0",
+  "description": "Monitor Gmail inbox with security scanning and trust-based filtering",
+  "author": "trifle-labs",
+  "license": "MIT",
+  "repository": "https://github.com/trifle-labs/skills",
+  "homepage": "https://github.com/trifle-labs/skills/tree/main/email-mentions",
+  "emoji": "📧",
+  "requires": {
+    "bins": ["gog", "jq", "python3"]
+  },
+  "dependencies": [
+    "indirect-prompt-injection"
+  ],
+  "files": [
+    "email-mentions.sh",
+    "SKILL.md"
+  ],
+  "install": {
+    "post": "chmod +x email-mentions.sh"
+  }
+}
