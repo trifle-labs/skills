@@ -63,16 +63,17 @@ export class ExpectedValueStrategy extends BaseStrategy {
     };
   }
 
-  analyzeTeams(parsed, currentTeamId) {
-    const minEV = this.getOption('minExpectedValue', 0.5);
-    const switchThreshold = this.getOption('switchThreshold', 1.5);
+  analyzeTeams(parsed, currentTeamId, ourContribution = 0) {
+    const minEV = this.getOption('minExpectedValue', 0.1);
+    const switchThreshold = this.getOption('switchThreshold', 3.0); // Much higher - switching loses existing stake
 
     // Calculate EV for each team (only teams with fruits can be targeted)
     const teamStats = parsed.teams
       .filter(team => team.closestFruit !== null) // Must have fruit to target
       .map(team => {
-        const ev = this.calculateExpectedValue(team, parsed);
-        return { team, ev };
+        const isCurrentTeam = team.id === currentTeamId;
+        const ev = this.calculateExpectedValue(team, parsed, isCurrentTeam);
+        return { team, ev, isCurrentTeam };
       });
 
     // If no teams have fruits, skip
@@ -91,86 +92,106 @@ export class ExpectedValueStrategy extends BaseStrategy {
     const bestTeam = teamStats[0];
     const currentTeam = teamStats.find(t => t.team.id === currentTeamId);
 
-    // Early game - just join the best team
-    if (!currentTeamId && bestTeam.ev > 0) {
+    // Early game - just join the team closest to winning
+    if (!currentTeamId) {
+      // Prefer team with highest score, then closest fruit
+      const bestByScore = [...teamStats].sort((a, b) => {
+        if (b.team.score !== a.team.score) return b.team.score - a.team.score;
+        return (a.team.closestFruit?.distance ?? 100) - (b.team.closestFruit?.distance ?? 100);
+      })[0];
+
       return {
         shouldPlay: true,
-        recommendedTeam: bestTeam.team,
-        reason: 'joining_best_team',
-        teamEV: bestTeam.ev,
+        recommendedTeam: bestByScore.team,
+        reason: `joining (score:${bestByScore.team.score}, dist:${bestByScore.team.closestFruit?.distance ?? '?'})`,
+        teamEV: bestByScore.ev,
       };
     }
 
-    // Check if we should switch teams
-    if (currentTeam && bestTeam.team.id !== currentTeamId) {
-      if (bestTeam.ev > currentTeam.ev * switchThreshold) {
+    // CRITICAL: If we have stake in current team, strongly prefer staying
+    // Switching teams means we LOSE our existing stake completely
+    if (currentTeam) {
+      const currentPool = currentTeam.team.pool || 0;
+
+      // If we're the majority of our team's pool, we have huge incentive to stay
+      // The only reason to switch is if current team literally cannot win
+      const currentFruitsNeeded = parsed.fruitsToWin - currentTeam.team.score;
+      const currentDist = currentTeam.team.closestFruit?.distance ?? 100;
+
+      // Stay with current team if it can still win
+      if (currentFruitsNeeded > 0 && currentTeam.team.closestFruit) {
+        return {
+          shouldPlay: true,
+          recommendedTeam: currentTeam.team,
+          reason: `loyal (need:${currentFruitsNeeded}, dist:${currentDist}, pool:${currentPool.toFixed(0)})`,
+          teamEV: currentTeam.ev,
+        };
+      }
+
+      // Current team has no path to victory - consider switching
+      if (!currentTeam.team.closestFruit || currentFruitsNeeded <= 0) {
         return {
           shouldPlay: true,
           recommendedTeam: bestTeam.team,
-          reason: `better_ev (${bestTeam.ev.toFixed(2)} vs ${currentTeam.ev.toFixed(2)})`,
+          reason: `switching (current team blocked)`,
           teamEV: bestTeam.ev,
         };
       }
     }
 
-    // Stay with current team if it has decent EV
-    if (currentTeam && currentTeam.ev > minEV) {
-      return {
-        shouldPlay: true,
-        recommendedTeam: currentTeam.team,
-        reason: 'staying_with_team',
-        teamEV: currentTeam.ev,
-      };
-    }
-
-    // Pick best team if EV is good enough
-    if (bestTeam.ev > minEV) {
-      return {
-        shouldPlay: true,
-        recommendedTeam: bestTeam.team,
-        reason: 'best_ev_available',
-        teamEV: bestTeam.ev,
-      };
-    }
-
-    // No good options
+    // Fallback: pick best team
     return {
-      shouldPlay: false,
-      recommendedTeam: null,
-      reason: 'no_good_ev',
+      shouldPlay: true,
+      recommendedTeam: bestTeam.team,
+      reason: 'best_available',
       teamEV: bestTeam.ev,
     };
   }
 
-  calculateExpectedValue(team, parsed) {
+  calculateExpectedValue(team, parsed, isCurrentTeam = false) {
     const fruitsNeeded = parsed.fruitsToWin - team.score;
     const fruitDist = team.closestFruit?.distance ?? 10;
-    const pool = team.pool;
+    const pool = team.pool || 0;
     const prizePool = parsed.prizePool;
 
-    // Estimate win probability
+    // Estimate win probability based on score and distance
     let winProb = 0;
     if (fruitsNeeded <= 0) {
-      winProb = 0; // Already won
+      winProb = 0; // Already won (shouldn't happen mid-game)
+    } else if (fruitsNeeded === 1 && fruitDist <= 1) {
+      winProb = 0.9; // Very close to winning
     } else if (fruitsNeeded === 1 && fruitDist <= 2) {
       winProb = 0.7;
     } else if (fruitsNeeded === 1) {
       winProb = 0.5;
-    } else if (fruitsNeeded === 2 && fruitDist <= 3) {
-      winProb = 0.3;
+    } else if (fruitsNeeded === 2 && fruitDist <= 2) {
+      winProb = 0.4;
     } else if (fruitsNeeded === 2) {
-      winProb = 0.2;
+      winProb = 0.25;
+    } else if (fruitsNeeded === 3) {
+      winProb = 0.15;
     } else {
       winProb = 0.1;
     }
 
-    // If team has no fruits, can't score
+    // If team has no fruits on board, can't score
     if (!team.closestFruit) {
-      winProb *= 0.5;
+      winProb = 0;
     }
 
-    // Calculate payout share (smaller pool = bigger share)
-    const payoutShare = prizePool / (pool + 1);
+    // Calculate payout share
+    // For current team: we already own part of the pool, so our share is higher
+    // For new team: we're diluting into existing pool
+    let payoutShare;
+    if (isCurrentTeam && pool > 0) {
+      // We likely own a significant portion of this pool already
+      // Assume we own roughly (our past bids / pool), but we don't track that
+      // Approximate: if pool is small, we probably own most of it
+      payoutShare = prizePool / Math.max(pool, 1);
+    } else {
+      // New team - we'd be adding to their pool
+      payoutShare = prizePool / (pool + 1);
+    }
 
     return winProb * payoutShare;
   }

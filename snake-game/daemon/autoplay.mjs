@@ -170,8 +170,8 @@ export async function runAutoplay(options = {}) {
 
         const newBalance = balance - vote.amount;
 
-        // Pass the full teams array for proper logging (only active teams)
-        await log(formatVote(parsed.round, vote.direction, vote.team, vote.amount, newBalance, parsed.teams), settings);
+        // Pass the full teams array and reason for proper logging
+        await log(formatVote(parsed.round, vote.direction, vote.team, vote.amount, newBalance, parsed.teams, vote.reason), settings);
 
       } catch (e) {
         const errorMsg = e.message || String(e);

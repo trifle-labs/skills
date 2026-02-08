@@ -43,12 +43,13 @@ export async function sendTelegram(text, chatId = null) {
 /**
  * Format a game event for logging
  */
-export function formatVote(round, direction, team, amount, balance, teams) {
+export function formatVote(round, direction, team, amount, balance, teams, reason = '') {
   // teams is an array of team objects with id, emoji, score
   const scoreStr = teams
     .map(t => `${t.emoji || t.id}${t.score}`)
     .join(' ');
-  return `🐍 R${round} ${direction.toUpperCase()} ${team.emoji}${team.id} x${amount} | bal:${balance.toFixed(1)} | ${scoreStr}`;
+  const reasonStr = reason ? ` | ${reason}` : '';
+  return `🐍 R${round} ${direction.toUpperCase()} ${team.emoji}${team.id} x${amount} | bal:${balance.toFixed(1)} | ${scoreStr}${reasonStr}`;
 }
 
 export function formatGameEnd(winner, didWin) {
