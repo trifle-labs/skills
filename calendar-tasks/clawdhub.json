@@ -1,0 +1,8 @@
+{
+  "name": "calendar-tasks",
+  "version": "1.0.0",
+  "description": "Schedule and trigger tasks via Google Calendar with prefix-based filtering and cron support",
+  "requires": {
+    "bins": ["gog", "jq"]
+  }
+}
