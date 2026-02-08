@@ -106,8 +106,8 @@ export async function runAutoplay(options = {}) {
         logToFile('New game started');
       }
 
-      // Game ended
-      if (!parsed.active && parsed.winner) {
+      // Game ended - only log once when transitioning from inGame to ended
+      if (!parsed.active && parsed.winner && inGame) {
         const winnerTeam = getTeamById(parsed, parsed.winner);
         const didWin = currentTeam === parsed.winner;
 
