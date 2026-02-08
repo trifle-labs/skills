@@ -38,6 +38,7 @@ export class ExpectedValueStrategy extends BaseStrategy {
 
     const targetTeam = analysis.recommendedTeam;
     const targetFruit = targetTeam.closestFruit?.fruit;
+    const fruitDist = targetTeam.closestFruit?.distance ?? '?';
 
     // Score all valid directions
     const dirScores = parsed.validDirections.map(dir => ({
@@ -48,14 +49,28 @@ export class ExpectedValueStrategy extends BaseStrategy {
     const bestDir = dirScores[0]?.dir;
     if (!bestDir) return null;
 
+    // Calculate distance after moving in best direction
+    let newDist = '?';
+    if (targetFruit) {
+      const offset = HEX_DIRECTIONS[bestDir];
+      const newPos = {
+        q: parsed.head.q + offset.q,
+        r: parsed.head.r + offset.r,
+      };
+      newDist = hexDistance(newPos, targetFruit);
+    }
+
     // Determine bid amount
     const bidAmount = this.calculateBid(parsed, balance, bestDir, targetTeam);
+
+    // Include distance info in reason for debugging
+    const distInfo = `d:${fruitDist}→${newDist}`;
 
     return {
       direction: bestDir,
       team: targetTeam,
       amount: bidAmount,
-      reason: analysis.reason,
+      reason: `${analysis.reason} ${distInfo}`,
       analysis: {
         teamEV: analysis.teamEV,
         dirScore: dirScores[0].score,
@@ -205,19 +220,28 @@ export class ExpectedValueStrategy extends BaseStrategy {
 
     let score = 0;
 
-    // Safety: count exits from new position
-    const exits = countExits(newPos, parsed.raw, OPPOSITE_DIRECTIONS[dir]);
-    score += exits * 10;
-
-    // Distance to target fruit
+    // CRITICAL: Check if this direction eats the fruit!
+    // This must be the highest priority
     if (targetFruit) {
       const dist = hexDistance(newPos, targetFruit);
-      score += (10 - dist) * 5;
+
+      // If this move eats the fruit (distance becomes 0), give massive bonus
+      if (dist === 0) {
+        score += 1000; // Overwhelming priority - always eat the fruit!
+      } else {
+        // Otherwise, score based on proximity
+        // Use exponential scoring to strongly prefer closer positions
+        score += Math.pow(10 - dist, 2) * 3;
+      }
     }
 
-    // Prefer staying toward center
+    // Safety: count exits from new position (secondary consideration)
+    const exits = countExits(newPos, parsed.raw, OPPOSITE_DIRECTIONS[dir]);
+    score += exits * 5;
+
+    // Prefer staying toward center (minor consideration)
     const distFromCenter = hexDistance(newPos, { q: 0, r: 0 });
-    score += (parsed.gridRadius - distFromCenter) * 2;
+    score += (parsed.gridRadius - distFromCenter);
 
     return score;
   }
