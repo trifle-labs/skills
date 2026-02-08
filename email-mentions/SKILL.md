@@ -77,12 +77,22 @@ Located at `~/.openclaw/workspace/skills/email-mentions/config.json`:
 
 ## Cron Setup
 
-Add to crontab for periodic checking:
+Add as an OpenClaw gateway cron job for automatic processing. From the gateway UI (Cron tab), create a new job:
 
-```bash
-# Check every 15 minutes
-*/15 * * * * ~/.openclaw/workspace/skills/email-mentions/email-mentions.sh check >> ~/.openclaw/workspace/memory/email-mentions.log 2>&1
-```
+- **Name:** Email Mentions Check
+- **Schedule:** `*/2 * * * *` (every 2 minutes)
+- **Session:** isolated
+- **Wake mode:** next-heartbeat
+- **Payload (agentTurn):**
+  ```
+  Run the email-mentions check and process any results:
+  1. Run: bash ~/.openclaw/workspace/skills/email-mentions/email-mentions.sh check
+  2. If there are pending emails from authorized senders, summarize them and report via Telegram
+  3. If quarantined emails exist, alert with details
+  4. If no new emails, do nothing
+  ```
+
+This ensures the agent processes pending emails automatically, rather than just logging them.
 
 ## Integration with Agent
 

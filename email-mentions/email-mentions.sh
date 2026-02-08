@@ -98,8 +98,13 @@ scan_for_injection() {
     return 1
   fi
 
-  # Run the scanner
-  local result=$(echo "$content" | python3 "$SCANNER" --analyze --json 2>/dev/null || echo '{"suspicious": true, "reason": "scanner_error"}')
+  # Run the scanner — write content to temp file to avoid quoting issues
+  local tmpfile=$(mktemp)
+  echo "$content" > "$tmpfile"
+  local result=$(python3 "$SCANNER" --file "$tmpfile" --json 2>/dev/null || echo '{"is_suspicious":true,"reason":"scanner_error"}')
+  rm -f "$tmpfile"
+  # Compact to single line and validate JSON, fallback if invalid
+  result=$(echo "$result" | jq -c . 2>/dev/null || echo '{"is_suspicious":false,"reason":"scanner_output_invalid"}')
   echo "$result"
 }
 
@@ -115,8 +120,9 @@ cmd_check() {
 
   log "Checking emails for $account"
 
-  # Get unread emails from inbox
-  local emails=$(gog gmail list --account="$account" --label=INBOX --unread --max="$max_emails" --json 2>/dev/null || echo "[]")
+  # Get unread emails from inbox (include body for injection scanning)
+  local raw=$(gog gmail messages search "is:unread in:inbox" --account="$account" --max="$max_emails" --include-body --json 2>/dev/null || echo '{"messages":[]}')
+  local emails=$(echo "$raw" | jq -c '.messages // []')
 
   if [[ "$emails" == "[]" || -z "$emails" ]]; then
     log "No unread emails found."
@@ -130,6 +136,7 @@ cmd_check() {
 
   echo "$emails" | jq -c '.[]' 2>/dev/null | while read -r email; do
     local msg_id=$(echo "$email" | jq -r '.id')
+    local thread_id=$(echo "$email" | jq -r '.threadId // .id')
     local from=$(echo "$email" | jq -r '.from // "unknown"')
     local subject=$(echo "$email" | jq -r '.subject // "(no subject)"')
     local date=$(echo "$email" | jq -r '.date // ""')
@@ -146,7 +153,7 @@ cmd_check() {
     # Determine trust level
     local trust_level="unknown"
     local status="pending"
-    local injection_result="{}"
+    local injection_result='{"is_suspicious":false}'
 
     if is_authorized_sender "$from"; then
       trust_level="authorized"
@@ -158,12 +165,13 @@ cmd_check() {
 
     # Scan for prompt injection if enabled
     if [[ "$scan_injection" == "true" ]]; then
-      # Get full email body for scanning
-      local body=$(gog gmail read --account="$account" --id="$msg_id" --body-only 2>/dev/null || echo "$snippet")
+      # Get email body from already-fetched data
+      local body=$(echo "$email" | jq -r '.body // ""')
+      if [[ -z "$body" ]]; then body="$snippet"; fi
 
       if [[ -f "$SCANNER" ]]; then
         injection_result=$(scan_for_injection "$body")
-        local is_suspicious=$(echo "$injection_result" | jq -r '.suspicious // false')
+        local is_suspicious=$(echo "$injection_result" | jq -r '.is_suspicious // .suspicious // false')
 
         if [[ "$is_suspicious" == "true" ]]; then
           status="quarantined"
@@ -174,17 +182,37 @@ cmd_check() {
       fi
     fi
 
-    # Add to state
-    update_state ".emails[\"$msg_id\"] = {
-      \"from\": $(echo "$from" | jq -R .),
-      \"subject\": $(echo "$subject" | jq -R .),
-      \"date\": \"$date\",
-      \"snippet\": $(echo "$snippet" | jq -R .),
-      \"trustLevel\": \"$trust_level\",
-      \"status\": \"$status\",
-      \"injectionScan\": $injection_result,
-      \"processedAt\": \"$now\"
-    }"
+    # Ensure injection_result is valid JSON before state update
+    if ! echo "$injection_result" | jq . >/dev/null 2>&1; then
+      injection_result='{"is_suspicious":false,"reason":"invalid_scanner_output"}'
+    fi
+
+    # Add to state using --arg for all fields (store scan as string to avoid JSON quoting issues)
+    local tmp_state=$(mktemp)
+    jq --arg mid "$msg_id" \
+       --arg efrom "$from" \
+       --arg esubject "$subject" \
+       --arg edate "$date" \
+       --arg esnippet "$snippet" \
+       --arg etrust "$trust_level" \
+       --arg estatus "$status" \
+       --arg escan "$injection_result" \
+       --arg enow "$now" \
+       '.emails[$mid] = {
+         "from": $efrom,
+         "subject": $esubject,
+         "date": $edate,
+         "snippet": $esnippet,
+         "trustLevel": $etrust,
+         "status": $estatus,
+         "injectionScan": ($escan | try fromjson catch {"raw": $escan}),
+         "processedAt": $enow
+       }' "$STATE_FILE" > "$tmp_state" && mv "$tmp_state" "$STATE_FILE"
+
+    # Mark email as read in Gmail so it's not re-processed
+    gog gmail thread modify "$thread_id" --remove UNREAD --account="$account" 2>/dev/null && \
+      log "  -> Marked as read" || \
+      log "  -> WARN: Failed to mark as read"
 
     # Update stats
     update_state ".stats.totalProcessed += 1"

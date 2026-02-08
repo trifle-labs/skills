@@ -1,0 +1,25 @@
+{
+  "name": "snake-game",
+  "version": "2.0.0",
+  "description": "Persistent autoplay daemon for the Trifle Snake game with modular strategy system",
+  "author": "trifle-labs",
+  "license": "MIT",
+  "repository": "https://github.com/trifle-labs/skills",
+  "homepage": "https://github.com/trifle-labs/skills/tree/main/snake-game",
+  "emoji": "🐍",
+  "requires": {
+    "bins": ["node"]
+  },
+  "dependencies": [
+    "trifle-auth"
+  ],
+  "files": [
+    "snake.mjs",
+    "SKILL.md",
+    "lib/",
+    "daemon/"
+  ],
+  "install": {
+    "post": "chmod +x snake.mjs"
+  }
+}

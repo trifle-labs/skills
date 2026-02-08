@@ -180,3 +180,24 @@ Only track mentions from users in this list (excluding self).
 - Store `lastChecked` timestamp
 - Use `created:>YYYY-MM-DD` in search to limit results
 - Skip mentions already in state file
+
+## Cron Setup
+
+Add as an OpenClaw gateway cron job for automatic processing. From the gateway UI (Cron tab), create a new job:
+
+- **Name:** GitHub Mentions Check
+- **Schedule:** `*/5 * * * *` (every 5 minutes)
+- **Session:** isolated
+- **Wake mode:** next-heartbeat
+- **Payload (agentTurn):**
+  ```
+  Run the GitHub mentions check and process any results:
+  1. Run: bash ~/.openclaw/workspace/skills/github-mentions/github-mentions.sh check
+  2. If there are NEW pending mentions, read the issue/PR details using gh api
+  3. ALWAYS respond directly on GitHub first (post review or comment)
+  4. Then notify via Telegram with a summary
+  5. Mark the mention as completed
+  6. If no new mentions, do nothing
+  ```
+
+This ensures the agent responds directly on GitHub and then notifies via Telegram as secondary.

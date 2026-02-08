@@ -182,11 +182,14 @@ cmd_check() {
       # Check if already tracked
       local existing=$(jq -r ".mentions[\"$mention_id\"] // empty" "$STATE_FILE")
       if [[ -z "$existing" ]]; then
-        # Get more details about who mentioned
+        # Get who actually triggered the notification
+        # For mentions, check the latest comment that contains our @username
         local mentioner="unknown"
-        if [[ "$notif_type" == "pullrequest" ]]; then
-          mentioner=$(gh api "$url" --jq '.user.login' 2>/dev/null || echo "unknown")
-        elif [[ "$notif_type" == "issue" ]]; then
+        local comments_url="repos/$repo_full/issues/$number/comments"
+        mentioner=$(gh api "$comments_url" --jq "[.[] | select(.body | test(\"@$username\"; \"i\"))] | last | .user.login // empty" 2>/dev/null || echo "")
+
+        # Fall back to PR/issue author if no matching comment found
+        if [[ -z "$mentioner" || "$mentioner" == "null" ]]; then
           mentioner=$(gh api "$url" --jq '.user.login' 2>/dev/null || echo "unknown")
         fi
 
