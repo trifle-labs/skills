@@ -35,12 +35,16 @@ export function isOnSnakeBody(q, r, snakeBody) {
 }
 
 /**
- * Calculate hex distance between two points
+ * Calculate hex distance between two points in axial coordinates
+ * Uses cube coordinate conversion: for axial (q, r), cube is (q, r, -q-r)
+ * Distance = max(|dq|, |dr|, |dq + dr|) where dq = q1 - q2, dr = r1 - r2
  */
 export function hexDistance(a, b) {
   const dq = a.q - b.q;
   const dr = a.r - b.r;
-  return (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
+  // In cube coordinates: dz = -dq - dr
+  // Distance is max(|dx|, |dy|, |dz|) = max(|dq|, |dr|, |dq + dr|)
+  return Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr));
 }
 
 /**

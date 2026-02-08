@@ -67,11 +67,23 @@ export class ExpectedValueStrategy extends BaseStrategy {
     const minEV = this.getOption('minExpectedValue', 0.5);
     const switchThreshold = this.getOption('switchThreshold', 1.5);
 
-    // Calculate EV for each team
-    const teamStats = parsed.teams.map(team => {
-      const ev = this.calculateExpectedValue(team, parsed);
-      return { team, ev };
-    });
+    // Calculate EV for each team (only teams with fruits can be targeted)
+    const teamStats = parsed.teams
+      .filter(team => team.closestFruit !== null) // Must have fruit to target
+      .map(team => {
+        const ev = this.calculateExpectedValue(team, parsed);
+        return { team, ev };
+      });
+
+    // If no teams have fruits, skip
+    if (teamStats.length === 0) {
+      return {
+        shouldPlay: false,
+        recommendedTeam: null,
+        reason: 'no_teams_with_fruits',
+        teamEV: 0,
+      };
+    }
 
     // Sort by EV
     teamStats.sort((a, b) => b.ev - a.ev);

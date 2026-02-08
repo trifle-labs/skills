@@ -1,0 +1,3 @@
+.snake-daemon.log
+.snake-daemon.pid
+.snake-daemon.state

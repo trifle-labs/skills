@@ -29,8 +29,13 @@ export class AggressiveStrategy extends BaseStrategy {
       return null;
     }
 
-    // Find the team closest to winning
-    const sortedTeams = [...parsed.teams].sort((a, b) => {
+    // Find the team closest to winning (must have fruits to target)
+    const teamsWithFruits = parsed.teams.filter(t => t.closestFruit !== null);
+    if (teamsWithFruits.length === 0) {
+      return { skip: true, reason: 'no_teams_with_fruits' };
+    }
+
+    const sortedTeams = [...teamsWithFruits].sort((a, b) => {
       // Primary: highest score
       if (b.score !== a.score) return b.score - a.score;
       // Secondary: closest fruit

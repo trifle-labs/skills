@@ -1,0 +1,21 @@
+{
+  "name": "snake-game",
+  "version": "2.1.0",
+  "type": "module",
+  "description": "Persistent autoplay daemon for Trifle Snake with modular strategy system",
+  "main": "snake.mjs",
+  "bin": {
+    "snake-game": "./snake.mjs"
+  },
+  "scripts": {
+    "start": "node snake.mjs start",
+    "stop": "node snake.mjs stop",
+    "status": "node snake.mjs status"
+  },
+  "dependencies": {
+    "trifle-bot-types": "^1.0.7"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

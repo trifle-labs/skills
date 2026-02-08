@@ -168,12 +168,10 @@ export async function runAutoplay(options = {}) {
         state.lastRound = parsed.round;
         saveDaemonState(state);
 
-        const scores = Object.fromEntries(
-          parsed.teams.map(t => [t.id, t.score])
-        );
         const newBalance = balance - vote.amount;
 
-        await log(formatVote(parsed.round, vote.direction, vote.team, vote.amount, newBalance, scores), settings);
+        // Pass the full teams array for proper logging (only active teams)
+        await log(formatVote(parsed.round, vote.direction, vote.team, vote.amount, newBalance, parsed.teams), settings);
 
       } catch (e) {
         const errorMsg = e.message || String(e);
