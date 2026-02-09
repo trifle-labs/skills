@@ -37,6 +37,7 @@ export const DEFAULTS = {
   strategy: 'expected-value',
   minBalance: 5,
   pollIntervalMs: 1000,
+  maxRoundBudgetPct: 0.2,
   telegramChatId: null,
   logToConsole: true,
   logToTelegram: true,

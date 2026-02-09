@@ -80,12 +80,10 @@ export class ConservativeStrategy extends BaseStrategy {
 
     if (!bestDir) return null;
 
-    const maxBid = this.getOption('maxBidAmount', 1);
-
     return {
       direction: bestDir,
       team: targetTeam,
-      amount: Math.min(parsed.minBid, maxBid),
+      amount: parsed.minBid,
       reason: 'safe_play',
     };
   }

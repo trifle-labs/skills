@@ -138,6 +138,14 @@ export function countExits(pos, gameState, excludeDir = null) {
 }
 
 /**
+ * Round timing constants (must match server config)
+ */
+export const ROUND_TIMING = {
+  baseDurationSec: 10,
+  extensionPeriodSec: 5,
+};
+
+/**
  * Parse game state into a more usable format
  */
 export function parseGameState(gs) {
@@ -153,12 +161,27 @@ export function parseGameState(gs) {
     closestFruit: findClosestFruit(head, gs.apples || {}, team.id),
   }));
 
+  const countdown = gs.countdown ?? ROUND_TIMING.baseDurationSec;
+  const initialMinBid = gs.config?.initialMinBid || 1;
+  const currentMinBid = gs.minBid || 1;
+
+  // How many extensions have happened this round (minBid doubles each time)
+  const extensions = currentMinBid > initialMinBid
+    ? Math.round(Math.log2(currentMinBid / initialMinBid))
+    : 0;
+
+  // In the extension window = voting now would trigger an extension + minBid doubling
+  const inExtensionWindow = countdown <= ROUND_TIMING.extensionPeriodSec && countdown > 0;
+
   return {
     active: gs.gameActive,
     round: gs.round,
     prizePool: gs.prizePool || 10,
-    minBid: gs.minBid || 1,
-    countdown: gs.countdown,
+    minBid: currentMinBid,
+    initialMinBid,
+    countdown,
+    inExtensionWindow,
+    extensions,
     fruitsToWin: gs.config?.fruitsToWin || 3,
     gridRadius: gs.gridSize?.radius || 3,
     head,

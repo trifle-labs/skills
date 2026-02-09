@@ -6,6 +6,7 @@
  *
  * Strategies can optionally override:
  * - shouldPlay(parsed, balance, state) -> boolean
+ * - shouldCounterBid(parsed, balance, state, ourVote) -> vote object | null
  * - onGameStart(parsed, state) -> void
  * - onGameEnd(parsed, state, didWin) -> void
  * - onRoundEnd(parsed, state) -> void
@@ -44,6 +45,26 @@ export class BaseStrategy {
     if (parsed.validDirections.length === 0) return false;
     if (balance < parsed.minBid) return false;
     return true;
+  }
+
+  /**
+   * Decide whether to counter-bid when our direction has been overridden.
+   *
+   * Called mid-round when the snake's currentDirection changed away from
+   * what we voted for. Key mechanics:
+   * - Last vote wins (not highest amount)
+   * - Voting in extension window (<5s left): timer += 5s, minBid *= 2
+   * - Payout is per vote count, not cumulative amount
+   * - All-pay: everyone pays regardless of outcome
+   *
+   * @param {object} parsed - Current parsed game state
+   * @param {number} balance - Current ball balance
+   * @param {object} state - Daemon state with roundSpend tracking
+   * @param {object} ourVote - The vote we submitted earlier this round
+   * @returns {object|null} - Vote object to counter, or null to let it go
+   */
+  shouldCounterBid(parsed, balance, state, ourVote) {
+    return null;
   }
 
   /**

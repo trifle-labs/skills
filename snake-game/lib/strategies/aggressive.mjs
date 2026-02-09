@@ -1,10 +1,10 @@
 /**
  * Aggressive Strategy
  *
- * Goes all-in on the leading team with higher bids.
- * - Always backs the team closest to winning
- * - Uses higher bid amounts to secure direction
- * - Willing to outbid competitors
+ * Backs the leading team, always tries to get the last word.
+ * - Counters bids up to a configurable extension depth
+ * - Uses minBid (amount doesn't affect payout share)
+ * - Willing to enter bidding wars within budget
  */
 
 import { BaseStrategy } from './base.mjs';
@@ -19,7 +19,7 @@ export class AggressiveStrategy extends BaseStrategy {
   constructor(options = {}) {
     super(
       'aggressive',
-      'High bids on leading teams. All-in mentality.',
+      'Backs leaders, counter-bids aggressively. Gets the last word.',
       options
     );
   }
@@ -29,16 +29,13 @@ export class AggressiveStrategy extends BaseStrategy {
       return null;
     }
 
-    // Find the team closest to winning (must have fruits to target)
     const teamsWithFruits = parsed.teams.filter(t => t.closestFruit !== null);
     if (teamsWithFruits.length === 0) {
       return { skip: true, reason: 'no_teams_with_fruits' };
     }
 
     const sortedTeams = [...teamsWithFruits].sort((a, b) => {
-      // Primary: highest score
       if (b.score !== a.score) return b.score - a.score;
-      // Secondary: closest fruit
       const aDist = a.closestFruit?.distance ?? 100;
       const bDist = b.closestFruit?.distance ?? 100;
       return aDist - bDist;
@@ -47,20 +44,43 @@ export class AggressiveStrategy extends BaseStrategy {
     const targetTeam = sortedTeams[0];
     if (!targetTeam) return null;
 
-    // Find best direction toward team's fruit
     const targetFruit = targetTeam.closestFruit?.fruit;
     const bestDir = this.findBestDirection(parsed, targetFruit);
-
     if (!bestDir) return null;
-
-    // Calculate aggressive bid
-    const bidAmount = this.calculateAggressiveBid(parsed, balance, bestDir);
 
     return {
       direction: bestDir,
       team: targetTeam,
-      amount: bidAmount,
-      reason: `backing_leader (score: ${targetTeam.score})`,
+      amount: parsed.minBid,
+      reason: `backing_leader (score:${targetTeam.score}, cost:${parsed.minBid})`,
+    };
+  }
+
+  /**
+   * Aggressive counter-bidding: will fight for direction up to N extensions.
+   * Stops when cost gets too high relative to balance.
+   */
+  shouldCounterBid(parsed, balance, state, ourVote) {
+    const maxExtensions = this.getOption('maxCounterExtensions', 2);
+
+    if (parsed.extensions > maxExtensions) {
+      return null;
+    }
+
+    // Don't blow more than 30% of balance on one round
+    if (parsed.minBid > balance * 0.3) {
+      return null;
+    }
+
+    if ((state.roundBudgetRemaining || 0) < parsed.minBid) {
+      return null;
+    }
+
+    return {
+      direction: ourVote.direction,
+      team: ourVote.team,
+      amount: parsed.minBid,
+      reason: `counter-agg (ext:${parsed.extensions}, cost:${parsed.minBid})`,
     };
   }
 
@@ -77,13 +97,15 @@ export class AggressiveStrategy extends BaseStrategy {
 
       let score = 0;
 
-      // Distance to target (closer = better)
       if (targetFruit) {
         const dist = hexDistance(newPos, targetFruit);
-        score += (10 - dist) * 10;
+        if (dist === 0) {
+          score += 1000;
+        } else {
+          score += (10 - dist) * 10;
+        }
       }
 
-      // Safety (but weighted less than in conservative strategies)
       const exits = countExits(newPos, parsed.raw, OPPOSITE_DIRECTIONS[dir]);
       score += exits * 3;
 
@@ -94,27 +116,5 @@ export class AggressiveStrategy extends BaseStrategy {
     }
 
     return best;
-  }
-
-  calculateAggressiveBid(parsed, balance, direction) {
-    const multiplier = this.getOption('bidMultiplier', 2);
-    const alwaysOutbid = this.getOption('alwaysOutbid', true);
-
-    let bid = parsed.minBid * multiplier;
-
-    // Check existing votes
-    const existingVote = parsed.votes[direction];
-    if (existingVote && alwaysOutbid) {
-      const currentAmount = existingVote.amount || existingVote.totalAmount || 0;
-      bid = Math.max(bid, currentAmount + 1);
-    }
-
-    // Don't bet more than half our balance
-    bid = Math.min(bid, Math.floor(balance / 2));
-
-    // But at least the minimum
-    bid = Math.max(bid, parsed.minBid);
-
-    return bid;
   }
 }
