@@ -1,13 +1,17 @@
 /**
  * Telegram logging integration
+ *
+ * Formatters are shared with the standalone snake-rodeo-agents library.
+ * Only sendTelegram (OpenClaw config) and formatStatus (skill-specific) live here.
  */
 
 import { getTelegramToken, loadSettings } from './config.mjs';
+export { formatVote, formatGameEnd, formatTeamSwitch, formatError, formatWarning } from 'snake-rodeo-agents';
 
 let cachedToken = null;
 
 /**
- * Send a message to Telegram
+ * Send a message to Telegram (uses OpenClaw config for token/chatId)
  */
 export async function sendTelegram(text, chatId = null) {
   const settings = loadSettings();
@@ -38,39 +42,6 @@ export async function sendTelegram(text, chatId = null) {
   } catch {
     return false;
   }
-}
-
-/**
- * Format a game event for logging
- */
-export function formatVote(round, direction, team, amount, balance, teams, reason = '') {
-  // teams is an array of team objects with id, emoji, score
-  const scoreStr = teams
-    .map(t => `${t.emoji || t.id}${t.score}`)
-    .join(' ');
-  const reasonStr = reason ? ` | ${reason}` : '';
-  return `🐍 R${round} ${direction.toUpperCase()} ${team.emoji}${team.id} x${amount} | bal:${balance.toFixed(1)} | ${scoreStr}${reasonStr}`;
-}
-
-export function formatGameEnd(winner, didWin) {
-  const emoji = didWin ? '🎉' : '🏁';
-  const suffix = didWin ? ' (we won!)' : '';
-  return `${emoji} Game ended! Winner: ${winner.emoji} ${winner.name}${suffix}`;
-}
-
-export function formatTeamSwitch(fromTeam, toTeam, reason) {
-  if (!fromTeam) {
-    return `🎯 Joining team: ${toTeam.emoji} ${toTeam.name}`;
-  }
-  return `🔄 Switching: ${fromTeam} → ${toTeam.emoji} ${toTeam.name} (${reason})`;
-}
-
-export function formatError(message) {
-  return `❌ ${message}`;
-}
-
-export function formatWarning(message) {
-  return `⚠️ ${message}`;
 }
 
 export function formatStatus(state, settings) {
