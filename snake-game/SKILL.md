@@ -128,10 +128,10 @@ snake start --strategy aggressive
 
 ### Creating Custom Strategies
 
-Extend BaseStrategy in lib/strategies/:
+Extend BaseStrategy from the `snake-rodeo-agents` library:
 
 ```javascript
-import { BaseStrategy } from './base.mjs';
+import { BaseStrategy } from 'snake-rodeo-agents';
 
 export class MyStrategy extends BaseStrategy {
   constructor(options = {}) {
@@ -139,7 +139,9 @@ export class MyStrategy extends BaseStrategy {
   }
 
   computeVote(parsed, balance, state) {
-    // Return { direction, team, amount, reason } or null
+    // Return { direction, team, amount, reason } to vote
+    // Return { skip: true, reason } to skip
+    // Return null to abstain
   }
 }
 ```
@@ -173,16 +175,60 @@ launchctl load ~/Library/LaunchAgents/com.openclaw.snake-daemon.plist
 
 ## Architecture
 
+Game logic, strategies, and the standalone agent library live in [snake-rodeo-agents](https://github.com/trifle-labs/snake-rodeo-agents) (TypeScript). This skill is an OpenClaw wrapper that provides daemon management, config persistence, and Telegram logging.
+
 ```
-snake-game/
-├── snake.mjs              # Main CLI
+snake-game/                             # OpenClaw skill wrapper
+├── snake.mjs                           # Main CLI
 ├── lib/
-│   ├── config.mjs         # Config management
-│   ├── api.mjs            # API client
-│   ├── telegram.mjs       # Telegram logging
-│   ├── game-state.mjs     # State parsing
-│   ├── process.mjs        # Process management
-│   └── strategies/        # Strategy modules
-└── daemon/
-    └── autoplay.mjs       # Daemon loop
+│   ├── config.mjs                      # OpenClaw config/paths
+│   ├── api.mjs                         # OpenClaw token-based API
+│   ├── process.mjs                     # Daemon management
+│   └── telegram.mjs                    # Telegram logging
+├── daemon/
+│   └── autoplay.mjs                    # Daemon game loop
+└── node_modules/
+    └── snake-rodeo-agents/             # Core library (from GitHub)
+        └── dist/                       # Compiled JS + type declarations
+            ├── index.js                # Public API exports
+            ├── lib/game-state.js       # Hex grid, BFS, flood-fill
+            ├── lib/strategies/         # Strategy modules
+            ├── lib/client.js           # Standalone API client
+            ├── lib/auth.js             # Wallet SIWE auth
+            ├── lib/simulator.js        # Local game simulator
+            └── bin/play.js             # Standalone CLI runner
+```
+
+## Upgrading
+
+To pull the latest `snake-rodeo-agents` library and restart the daemon:
+
+```bash
+# 1. Stop the running daemon
+node snake.mjs stop
+
+# 2. If the daemon is stuck or was started outside the skill:
+#    Find and kill it manually
+ps aux | grep autoplay
+kill <PID>
+#    Or kill all node snake processes:
+pkill -f 'snake-game/daemon/autoplay'
+
+# 3. Update the library
+cd ~/.openclaw/workspace/skills/snake-game
+npm install github:trifle-labs/snake-rodeo-agents
+
+# 4. Restart
+node snake.mjs start --detach
+```
+
+If you installed as a system service:
+
+```bash
+# Linux (systemd)
+systemctl --user restart snake-daemon
+
+# macOS (launchd)
+launchctl unload ~/Library/LaunchAgents/com.openclaw.snake-daemon.plist
+launchctl load ~/Library/LaunchAgents/com.openclaw.snake-daemon.plist
 ```
