@@ -12,8 +12,7 @@
 
 import { loadSettings, loadDaemonState, saveDaemonState } from '../lib/config.mjs';
 import { getGameState, getBalance, submitVote, isAuthenticated } from '../lib/api.mjs';
-import { parseGameState, getTeamById } from '../lib/game-state.mjs';
-import { getStrategy } from '../lib/strategies/index.mjs';
+import { parseGameState, getTeamById, getStrategy } from 'snake-rodeo-agents';
 import { sendTelegram, formatVote, formatGameEnd, formatTeamSwitch, formatError, formatWarning } from '../lib/telegram.mjs';
 import { logToFile, isDaemonRunning } from '../lib/process.mjs';
 

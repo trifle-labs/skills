@@ -1,8 +1,8 @@
 {
   "name": "snake-game",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "type": "module",
-  "description": "Persistent autoplay daemon for Trifle Snake with modular strategy system",
+  "description": "OpenClaw skill for Trifle Snake autoplay daemon",
   "main": "snake.mjs",
   "bin": {
     "snake-game": "./snake.mjs"
@@ -13,7 +13,7 @@
     "status": "node snake.mjs status"
   },
   "dependencies": {
-    "trifle-bot-types": "^1.0.7"
+    "snake-rodeo-agents": "github:trifle-labs/snake-rodeo-agents"
   },
   "engines": {
     "node": ">=18"

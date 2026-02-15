@@ -50,9 +50,8 @@ import {
   hasSystemd,
   hasLaunchd,
 } from './lib/process.mjs';
-import { getStrategy, listStrategiesWithInfo } from './lib/strategies/index.mjs';
+import { getStrategy, listStrategiesWithInfo, parseGameState } from 'snake-rodeo-agents';
 import { getGameState, getBalance, submitVote, getRodeos, isAuthenticated } from './lib/api.mjs';
-import { parseGameState } from './lib/game-state.mjs';
 import { sendTelegram, formatStatus } from './lib/telegram.mjs';
 import { runAutoplay } from './daemon/autoplay.mjs';
 

@@ -1,3 +1,5 @@
 .snake-daemon.log
 .snake-daemon.pid
 .snake-daemon.state
+node_modules/
+package-lock.json
