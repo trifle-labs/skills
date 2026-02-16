@@ -1,0 +1,19 @@
+{
+  "name": "good-morning-web",
+  "version": "1.0.0",
+  "description": "Play the Trifle GM game via web API - creative G+M word pairs to earn balls",
+  "author": "trifle-labs",
+  "license": "MIT",
+  "emoji": "🌅",
+  "requires": {
+    "bins": ["node"]
+  },
+  "dependencies": ["trifle-auth"],
+  "files": [
+    "gm.mjs",
+    "SKILL.md"
+  ],
+  "install": {
+    "post": "chmod +x gm.mjs"
+  }
+}

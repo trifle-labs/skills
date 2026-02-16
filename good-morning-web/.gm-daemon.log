@@ -1,0 +1,4 @@
+[2026-02-11T11:21:15.922Z] [Tilt] Trying: "grassy mackerel" (attempt 1)
+[2026-02-11T11:21:16.223Z] [Tilt] Error 403: {"error":"Please add social layer (Discord, Farcaster, Telegram or Twitter) to your account to post GMs."}
+[2026-02-11T11:21:26.216Z] [GiGi] Trying: "grizzled moment" (attempt 1)
+[2026-02-11T11:21:26.421Z] [GiGi] Error 403: {"error":"Please add social layer (Discord, Farcaster, Telegram or Twitter) to your account to post GMs."}
