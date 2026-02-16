@@ -1,11 +1,11 @@
 {
-  "name": "snake-game",
+  "name": "snake-rodeo",
   "version": "3.0.0",
   "type": "module",
   "description": "OpenClaw skill for Trifle Snake autoplay daemon",
   "main": "snake.mjs",
   "bin": {
-    "snake-game": "./snake.mjs"
+    "snake-rodeo": "./snake.mjs"
   },
   "scripts": {
     "start": "node snake.mjs start",

@@ -1,76 +1,34 @@
 # Trifle Labs Skills
 
-Claude Code / OpenClaw skills for monitoring, games, and automation.
+Agent skills for the [Trifle Snake Rodeo](https://trifle.life) game.
 
-## Skills
+## Snake Rodeo
 
-| Skill | Description | Install |
-|-------|-------------|---------|
-| [snake-game](./snake-game) | 🐍 Persistent autoplay daemon for Trifle Snake | `clawdhub install trifle-labs/snake-game` |
-| [github-mentions](./github-mentions) | Monitor GitHub mentions across your orgs | `clawdhub install trifle-labs/github-mentions` |
-| [email-mentions](./email-mentions) | Monitor Gmail with security scanning | `clawdhub install trifle-labs/email-mentions` |
-| [got-it](./got-it) | Schelling point coordination game | `clawdhub install trifle-labs/got-it` |
-| [good-morning](./good-morning) | GM game - creative G+M word pairs | `clawdhub install trifle-labs/good-morning` |
+Autoplay daemon with modular AI strategies for the Trifle Snake Rodeo game. Built on [snake-rodeo-agents](https://github.com/trifle-labs/snake-rodeo-agents).
 
-## Installation
+| | |
+|---|---|
+| **Skill** | [snake-rodeo](./snake-rodeo) |
+| **ClawHub** | [clawhub.ai/okwme/snake-rodeo](https://clawhub.ai/okwme/snake-rodeo) |
+| **Install** | `clawdhub install okwme/snake-rodeo` |
 
-### Via ClawdHub (Recommended)
+### Quick Start
 
 ```bash
-# Install a single skill
-clawdhub install trifle-labs/snake-game
+# Install
+clawdhub install okwme/snake-rodeo
 
-# Install multiple skills
-clawdhub install trifle-labs/github-mentions
-clawdhub install trifle-labs/email-mentions
-```
-
-### Via Git (Symlink Method)
-
-Clone the repo and symlink individual skills to your workspace:
-
-```bash
-# Clone the skills repo
+# Or via git
 git clone https://github.com/trifle-labs/skills.git ~/repos/trifle-skills
+ln -s ~/repos/trifle-skills/snake-rodeo ~/.openclaw/workspace/skills/snake-rodeo
+cd ~/.openclaw/workspace/skills/snake-rodeo && npm install
 
-# Symlink skills you want to use
-ln -s ~/repos/trifle-skills/snake-game ~/.openclaw/workspace/skills/snake-game
-ln -s ~/repos/trifle-skills/github-mentions ~/.openclaw/workspace/skills/github-mentions
-ln -s ~/repos/trifle-skills/email-mentions ~/.openclaw/workspace/skills/email-mentions
-
-# Make scripts executable
-chmod +x ~/.openclaw/workspace/skills/*/snake.mjs
-chmod +x ~/.openclaw/workspace/skills/*/*.sh
+# Run
+node snake.mjs start --detach
+node snake.mjs status
 ```
 
-This method allows you to:
-- Keep skills version-controlled
-- Easily sync updates via `git pull`
-- Share skills across multiple machines
-
-### Manual Installation
-
-```bash
-# Copy a skill directly
-cp -r ~/repos/trifle-skills/snake-game ~/.openclaw/workspace/skills/
-```
-
-## Updating Skills
-
-### Via ClawdHub
-
-```bash
-clawdhub update
-```
-
-### Via Git
-
-```bash
-cd ~/repos/trifle-skills
-git pull origin main
-```
-
-If using symlinks, the updates are automatically available.
+See [snake-rodeo/SKILL.md](./snake-rodeo/SKILL.md) for full documentation — strategies, API client, wallet auth, tournament simulator, and more.
 
 ## License
 
