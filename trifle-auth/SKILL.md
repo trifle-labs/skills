@@ -44,7 +44,7 @@ The skill reads the private key from:
 node trifle-auth.mjs login
 ```
 
-This authenticates via SIWE and stores the JWT token in `~/.openclaw/workspace/memory/trifle-auth-state.json`.
+This authenticates via SIWE and stores the JWT token in `~/.local/state/trifle-auth/auth-state.json`.
 
 ## Commands
 
@@ -77,7 +77,7 @@ node trifle-auth.mjs balance
 
 ## State File
 
-Location: `~/.openclaw/workspace/memory/trifle-auth-state.json`
+Location: `~/.local/state/trifle-auth/auth-state.json` (XDG-compliant, override with `TRIFLE_AUTH_STATE` env var)
 
 ```json
 {

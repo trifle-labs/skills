@@ -30,7 +30,16 @@ const SERVERS = {
   staging: 'https://bot-staging.trifle.life',
 };
 
-const SETTINGS_FILE = join(process.env.HOME, '.openclaw/workspace/memory/snake-game-settings.json');
+// XDG-compliant paths — isolated from host agent internals
+const HOME = process.env.HOME;
+const XDG_CONFIG = process.env.XDG_CONFIG_HOME || join(HOME, '.config');
+const XDG_STATE  = process.env.XDG_STATE_HOME  || join(HOME, '.local/state');
+const CONFIG_DIR  = join(XDG_CONFIG, 'trifle-auth');
+const STATE_DIR   = join(XDG_STATE,  'trifle-auth');
+
+const STATE_FILE = process.env.TRIFLE_AUTH_STATE || join(STATE_DIR, 'auth-state.json');
+const SETTINGS_FILE = join(CONFIG_DIR, 'settings.json');
+const BACKEND_URL = process.env.TRIFLE_BACKEND_URL || SERVERS.live;
 
 function loadServerSettings() {
   try {
@@ -38,16 +47,12 @@ function loadServerSettings() {
       return JSON.parse(readFileSync(SETTINGS_FILE, 'utf8'));
     }
   } catch {}
-  return { server: 'staging' };
+  return { server: 'live' };
 }
 
-const serverSettings = loadServerSettings();
-const STATE_FILE = process.env.TRIFLE_AUTH_STATE ||
-  join(process.env.HOME, '.openclaw/workspace/memory/trifle-auth-state.json');
-const BACKEND_URL = process.env.TRIFLE_BACKEND_URL || SERVERS[serverSettings.server] || SERVERS.staging;
-
-// Ensure state directory exists
-mkdirSync(dirname(STATE_FILE), { recursive: true });
+// Ensure state and config directories exist
+mkdirSync(STATE_DIR, { recursive: true });
+mkdirSync(CONFIG_DIR, { recursive: true });
 
 function loadState() {
   try {
