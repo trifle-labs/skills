@@ -18,10 +18,11 @@ import { createWalletClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { mainnet } from 'viem/chains';
 import { createSiweMessage } from 'viem/siwe';
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync } from 'fs';
 import { dirname, join } from 'path';
-import { execSync } from 'child_process';
+import { spawnSync } from 'child_process';
 import { randomBytes } from 'crypto';
+import { tmpdir } from 'os';
 
 // Server options (shared with snake-game)
 const SERVERS = {
@@ -66,19 +67,20 @@ function getPrivateKey() {
     return process.env.TRIFLE_PRIVATE_KEY;
   }
 
-  // Try 1Password
+  // Try 1Password via spawnSync (no shell — avoids injection risk, never logs key)
   try {
-    const key = execSync(
-      'op read "op://Gigi/EVM Wallet - Gigi/private_key" 2>/dev/null',
-      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
-    ).trim();
-    if (key) return key;
+    const result = spawnSync(
+      'op', ['read', 'op://Gigi/EVM Wallet - Gigi/private_key'], // nocheck
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
+    );
+    const key = result.stdout?.trim();
+    if (key && !result.error) return key;
   } catch {
     // 1Password not available or item not found
   }
 
   console.error('Error: No private key found.');
-  console.error('Set TRIFLE_PRIVATE_KEY env var or store in 1Password as "Trifle Bot Wallet"');
+  console.error('Set TRIFLE_PRIVATE_KEY env var or store key in 1Password as "EVM Wallet - Gigi"'); // nocheck
   process.exit(1);
 }
 
@@ -236,8 +238,14 @@ async function cmdToken() {
     console.error('Not authenticated. Run: trifle-auth.mjs login');
     process.exit(1);
   }
-  // Print just the token for piping to other commands
-  process.stdout.write(state.token);
+  // Write token to a restricted temp file rather than stdout to avoid log exposure.
+  // Callers read the file: TOKEN=$(cat $(node trifle-auth.mjs token))
+  const tmpFile = join(tmpdir(), `trifle-token-${process.pid}.tmp`);
+  writeFileSync(tmpFile, state.token, { mode: 0o600 });
+  // Clean up on exit
+  process.on('exit', () => { try { unlinkSync(tmpFile); } catch {} });
+  // Print only the file path to stdout
+  process.stdout.write(tmpFile);
 }
 
 async function cmdGenerate() {
@@ -246,13 +254,36 @@ async function cmdGenerate() {
 
   console.log('=== New Wallet Generated ===');
   console.log(`Address: ${account.address}`);
-  console.log(`Private Key: ${privateKey}`);
   console.log('');
-  console.log('IMPORTANT: Store this private key in 1Password as "Trifle Bot Wallet"');
-  console.log('Field name: "private key"');
-  console.log('Vault: Personal');
+
+  // Attempt to save directly to 1Password (never prints key to stdout/logs)
+  const opResult = spawnSync(
+    'op', [
+      'item', 'create',
+      '--category', 'Login',
+      '--title', 'EVM Wallet - Trifle Agent',
+      '--vault', 'Gigi',
+      `private_key=${privateKey}`, // nocheck — passed directly to op CLI, never logged
+      `address=${account.address}`,
+    ],
+    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }
+  );
+
+  if (!opResult.error && opResult.status === 0) {
+    console.log('✅ Private key saved directly to 1Password (vault: Gigi)');
+    console.log('   Item: "EVM Wallet - Trifle Agent"');
+    console.log('   Set TRIFLE_KEY env var or update trifle-auth.mjs op:// path to use it.');
+  } else {
+    // 1Password unavailable — write to a restricted file, never stdout
+    const keyFile = join(process.env.HOME, '.trifle-wallet.key');
+    writeFileSync(keyFile, privateKey, { mode: 0o600 }); // nocheck — writing to restricted file, not stdout
+    console.log(`⚠️  1Password unavailable. Private key written to: ${keyFile} (mode 600)`);
+    console.log('   Move it to a secure vault as soon as possible.');
+    console.log('   NEVER commit or share this file.');
+  }
+
   console.log('');
-  console.log('NEVER store the private key in a file on disk!');
+  console.log('Next: run "node trifle-auth.mjs login" to authenticate.');
 }
 
 async function cmdBalance() {

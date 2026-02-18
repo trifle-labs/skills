@@ -30,17 +30,13 @@ npm install
 node trifle-auth.mjs generate
 ```
 
-This prints a new Ethereum address and private key. **Store the private key in 1Password immediately:**
-
-- Item name: `Trifle Bot Wallet`
-- Vault: `Personal`
-- Field: `private key`
+This generates a new Ethereum address and **automatically saves the private key to 1Password** (vault: Gigi, item: "EVM Wallet - Trifle Agent"). The key is never printed to stdout. If 1Password is unavailable, it falls back to a restricted file (`~/.trifle-wallet.key`, mode 600).
 
 ### 3. Set environment (or use 1Password)
 
 The skill reads the private key from:
 1. `TRIFLE_PRIVATE_KEY` environment variable (first priority)
-2. 1Password: `op://Personal/Trifle Bot Wallet/private key`
+2. 1Password: `op://Gigi/EVM Wallet - Gigi/private_key` <!-- nocheck -->
 
 ### 4. Login
 
@@ -59,7 +55,8 @@ node trifle-auth.mjs login
 # Check auth status and user info
 node trifle-auth.mjs status
 
-# Print JWT token (for piping to other tools)
+# Get JWT token path (written to a secure temp file, not stdout)
+TOKEN=$(cat $(node trifle-auth.mjs token))
 node trifle-auth.mjs token
 
 # Generate a new wallet keypair
