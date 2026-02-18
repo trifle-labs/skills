@@ -2,16 +2,17 @@
  * Telegram logging integration
  *
  * Formatters are shared with the standalone snake-rodeo-agents library.
- * Only sendTelegram (OpenClaw config) and formatStatus (skill-specific) live here.
+ * Only sendTelegram and formatStatus (skill-specific) live here.
  */
 
-import { getTelegramToken, loadSettings } from './config.mjs';
+import { loadSettings } from './config.mjs';
 export { formatVote, formatGameEnd, formatTeamSwitch, formatError, formatWarning } from 'snake-rodeo-agents';
 
 let cachedToken = null;
 
 /**
- * Send a message to Telegram (uses OpenClaw config for token/chatId)
+ * Send a message to Telegram
+ * Token resolution: TELEGRAM_BOT_TOKEN env var → settings.telegramBotToken → null
  */
 export async function sendTelegram(text, chatId = null) {
   const settings = loadSettings();
@@ -21,7 +22,7 @@ export async function sendTelegram(text, chatId = null) {
   if (!settings.logToTelegram) return false;
 
   if (!cachedToken) {
-    cachedToken = process.env.TELEGRAM_BOT_TOKEN || getTelegramToken();
+    cachedToken = process.env.TELEGRAM_BOT_TOKEN || settings.telegramBotToken || null;
   }
 
   if (!cachedToken) {

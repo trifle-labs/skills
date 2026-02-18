@@ -8,7 +8,7 @@ license: MIT
 compatibility: Requires Node.js 18+. Depends on trifle-auth skill for initial authentication.
 metadata:
   author: trifle-labs
-  version: "3.0.0"
+  version: "3.1.0"
   homepage: https://agentskills.io/okwme/snake-rodeo
 ---
 
@@ -50,10 +50,6 @@ node snake.mjs state
 node snake.mjs vote <direction> <team> [amount]
 node snake.mjs strategy    # Analyze current game
 node snake.mjs balance
-
-# System service (auto-restart on boot)
-node snake.mjs install-service
-node snake.mjs uninstall-service
 ```
 
 ## Strategies
@@ -250,6 +246,7 @@ node snake.mjs telegram off          # disable
 | `server` | `live` | `live` or `staging` |
 | `minBalance` | `5` | Minimum balance to place votes |
 | `telegramChatId` | `null` | Telegram chat ID for logging |
+| `telegramBotToken` | `null` | Telegram bot token (or set `TELEGRAM_BOT_TOKEN` env var) |
 
 ## Architecture
 
@@ -260,7 +257,7 @@ snake-game/                             # OpenClaw skill wrapper
 ├── clawdhub.json                       # ClawHub registry metadata
 ├── package.json                        # Dependencies (snake-rodeo-agents)
 ├── lib/
-│   ├── config.mjs                      # OpenClaw config/paths
+│   ├── config.mjs                      # Settings/paths
 │   ├── api.mjs                         # Token-based API (uses OpenClaw auth)
 │   ├── process.mjs                     # Daemon PID management
 │   └── telegram.mjs                    # Telegram bridge
@@ -285,15 +282,4 @@ node snake.mjs stop
 cd ~/.openclaw/workspace/skills/snake-game
 npm install github:trifle-labs/snake-rodeo-agents
 node snake.mjs start --detach
-```
-
-If running as a system service:
-
-```bash
-# Linux
-systemctl --user restart snake-daemon
-
-# macOS
-launchctl unload ~/Library/LaunchAgents/com.openclaw.snake-daemon.plist
-launchctl load ~/Library/LaunchAgents/com.openclaw.snake-daemon.plist
 ```

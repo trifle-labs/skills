@@ -13,8 +13,6 @@
  *   snake resume                               Resume voting
  *   snake config [key] [value]                 Get/set config
  *   snake strategies                           List available strategies
- *   snake install-service                      Install systemd/launchd
- *   snake uninstall-service                    Remove service
  *
  * Legacy commands (from original snake-game.mjs):
  *   snake state                                Get current game state
@@ -45,10 +43,6 @@ import {
   getDaemonStatus,
   startDaemonBackground,
   tailLogs,
-  installService,
-  uninstallService,
-  hasSystemd,
-  hasLaunchd,
 } from './lib/process.mjs';
 import { getStrategy, listStrategiesWithInfo, parseGameState } from 'snake-rodeo-agents';
 import { getGameState, getBalance, submitVote, getRodeos, isAuthenticated } from './lib/api.mjs';
@@ -93,16 +87,6 @@ async function main() {
     case 'strategies':
     case 'list-strategies':
       cmdListStrategies();
-      break;
-
-    case 'install-service':
-    case 'install':
-      cmdInstallService();
-      break;
-
-    case 'uninstall-service':
-    case 'uninstall':
-      cmdUninstallService();
       break;
 
     case 'daemon':
@@ -280,16 +264,6 @@ function cmdListStrategies() {
     console.log('');
   }
   console.log('Use: snake config strategy <name>');
-}
-
-function cmdInstallService() {
-  const result = installService();
-  console.log(result.message);
-}
-
-function cmdUninstallService() {
-  const result = uninstallService();
-  console.log(result.message);
 }
 
 async function cmdDaemon() {
@@ -498,10 +472,6 @@ CONFIGURATION:
   strategies                            List available strategies
   server [live|staging]                 Switch game server
   telegram [chat_id|off]                Configure Telegram logging
-
-SERVICE MANAGEMENT:
-  install-service                       Install systemd/launchd service
-  uninstall-service                     Remove the service
 
 GAME COMMANDS:
   state                                 Get current game state

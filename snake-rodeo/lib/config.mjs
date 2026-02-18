@@ -13,14 +13,12 @@ import { join } from 'path';
 
 const HOME = process.env.HOME;
 const SETTINGS_FILE = join(HOME, '.openclaw/workspace/memory/snake-game-settings.json');
-const OPENCLAW_CONFIG = join(HOME, '.openclaw/openclaw.json');
 const PID_FILE = join(HOME, '.openclaw/workspace/skills/snake-game/.snake-daemon.pid');
 const LOG_FILE = join(HOME, '.openclaw/workspace/skills/snake-game/.snake-daemon.log');
 const STATE_FILE = join(HOME, '.openclaw/workspace/skills/snake-game/.snake-daemon.state');
 
 export const PATHS = {
   settings: SETTINGS_FILE,
-  openclawConfig: OPENCLAW_CONFIG,
   pidFile: PID_FILE,
   logFile: LOG_FILE,
   stateFile: STATE_FILE,
@@ -39,6 +37,7 @@ export const DEFAULTS = {
   pollIntervalMs: 1000,
   maxRoundBudgetPct: 0.2,
   telegramChatId: null,
+  telegramBotToken: null,
   logToConsole: true,
   logToTelegram: true,
   logToFile: true,
@@ -129,18 +128,6 @@ export function setConfig(key, value) {
   obj[keys[keys.length - 1]] = value;
   saveSettings(settings);
   return settings;
-}
-
-/**
- * Get Telegram bot token from openclaw config
- */
-export function getTelegramToken() {
-  try {
-    const config = JSON.parse(readFileSync(OPENCLAW_CONFIG, 'utf8'));
-    return config?.channels?.telegram?.botToken || null;
-  } catch {
-    return null;
-  }
 }
 
 /**
