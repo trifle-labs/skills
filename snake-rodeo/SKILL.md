@@ -8,7 +8,7 @@ license: MIT
 compatibility: Requires Node.js 18+. Depends on trifle-auth skill for initial authentication.
 metadata:
   author: trifle-labs
-  version: "3.1.0"
+  version: "3.2.0"
   homepage: https://snake.rodeo
 ---
 
@@ -18,7 +18,7 @@ Play the [Trifle Snake Rodeo](https://trifle.life) automatically with a persiste
 
 ## How It Works
 
-The game is a multiplayer snake on a hex grid. Teams bid on directions each round — the highest bidder's direction wins. All bids go into a prize pool that the winning team splits. The daemon watches the game via SSE, picks optimal directions using a strategy, and submits votes automatically.
+The game is a multiplayer snake on a grid (hex or cartesian). Teams bid on directions each round — the highest bidder's direction wins. All bids go into a prize pool that the winning team splits. The daemon watches the game via SSE, picks optimal directions using a strategy, and submits votes automatically.
 
 ## Prerequisites
 
@@ -58,7 +58,7 @@ Five built-in strategies are available. Each extends `BaseStrategy` from `snake-
 
 | Strategy | Alias | Description |
 |----------|-------|-------------|
-| `expected-value` | `ev`, `default` | BFS pathfinding, dead-end avoidance, game-theoretic team selection. Balanced. |
+| `expected-value` | `ev`, `default` | BFS pathfinding, dead-end avoidance, game-theoretic team selection, probabilistic defection in multi-agent scenarios. Balanced. |
 | `aggressive` | `agg` | Backs leading teams, counter-bids aggressively. |
 | `underdog` | `und` | Backs small pools for bigger payouts. |
 | `conservative` | `con` | Minimum bids, prioritizes safety. |
@@ -279,7 +279,7 @@ snake-game/                             # OpenClaw skill wrapper
 
 ```bash
 node snake.mjs stop
-cd ~/.openclaw/workspace/skills/snake-game
+cd ~/.openclaw/workspace/skills/snake-rodeo
 npm install github:trifle-labs/snake-rodeo-agents
 node snake.mjs start --detach
 ```

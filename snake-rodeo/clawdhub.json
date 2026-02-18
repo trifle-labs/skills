@@ -1,6 +1,6 @@
 {
   "name": "snake-rodeo",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "OpenClaw skill for Trifle Snake autoplay daemon",
   "author": "trifle-labs",
   "license": "MIT",
