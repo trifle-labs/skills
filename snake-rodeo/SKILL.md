@@ -9,7 +9,7 @@ compatibility: Requires Node.js 18+. Depends on trifle-auth skill for initial au
 metadata:
   author: trifle-labs
   version: "3.1.0"
-  homepage: https://agentskills.io/okwme/snake-rodeo
+  homepage: https://snake.rodeo
 ---
 
 # Snake Rodeo Skill
