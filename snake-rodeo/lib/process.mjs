@@ -34,6 +34,7 @@ export function isDaemonRunning() {
  * Write PID file
  */
 export function writePidFile() {
+  PATHS._dirs.ensureDir(PATHS._dirs.state);
   writeFileSync(PATHS.pidFile, process.pid.toString());
 }
 
@@ -71,6 +72,7 @@ export function logToFile(message) {
   const settings = loadSettings();
   if (!settings.logToFile) return;
 
+  PATHS._dirs.ensureDir(PATHS._dirs.data);
   const timestamp = new Date().toISOString();
   const line = `[${timestamp}] ${message}\n`;
   appendFileSync(PATHS.logFile, line);

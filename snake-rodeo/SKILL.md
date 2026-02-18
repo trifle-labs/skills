@@ -240,6 +240,8 @@ node snake.mjs telegram off          # disable
 
 ## Configuration
 
+Settings are stored in `~/.config/snake-rodeo/settings.json` (XDG-compliant, isolated from any host agent).
+
 | Key | Default | Description |
 |-----|---------|-------------|
 | `strategy` | `expected-value` | Active strategy name |
@@ -247,6 +249,25 @@ node snake.mjs telegram off          # disable
 | `minBalance` | `5` | Minimum balance to place votes |
 | `telegramChatId` | `null` | Telegram chat ID for logging |
 | `telegramBotToken` | `null` | Telegram bot token (or set `TELEGRAM_BOT_TOKEN` env var) |
+
+### File Locations
+
+| Purpose | Path |
+|---------|------|
+| Settings | `~/.config/snake-rodeo/settings.json` |
+| Auth token | `~/.config/snake-rodeo/auth.json` or `TRIFLE_AUTH_TOKEN` env var |
+| Daemon state | `~/.local/state/snake-rodeo/daemon.state` |
+| Daemon PID | `~/.local/state/snake-rodeo/daemon.pid` |
+| Daemon log | `~/.local/share/snake-rodeo/daemon.log` |
+
+### Authentication
+
+The skill resolves your Trifle auth token in this order:
+
+1. `TRIFLE_AUTH_TOKEN` environment variable (recommended for automation)
+2. `~/.config/snake-rodeo/auth.json` — `{ "token": "your-jwt-here" }`
+
+To set up auth, run `snake auth login` (uses `trifle-auth` skill) or set the env var directly.
 
 ## Architecture
 

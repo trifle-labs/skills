@@ -4,25 +4,49 @@
  * Loads config from multiple sources with precedence:
  * 1. CLI arguments (highest)
  * 2. Environment variables
- * 3. Config file (~/.openclaw/workspace/memory/snake-game-settings.json)
+ * 3. Config file (~/.config/snake-rodeo/settings.json)
  * 4. Defaults (lowest)
+ *
+ * All paths use XDG Base Directory conventions and are isolated
+ * to snake-rodeo's own directories. No access to host agent internals.
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 const HOME = process.env.HOME;
-const SETTINGS_FILE = join(HOME, '.openclaw/workspace/memory/snake-game-settings.json');
-const PID_FILE = join(HOME, '.openclaw/workspace/skills/snake-game/.snake-daemon.pid');
-const LOG_FILE = join(HOME, '.openclaw/workspace/skills/snake-game/.snake-daemon.log');
-const STATE_FILE = join(HOME, '.openclaw/workspace/skills/snake-game/.snake-daemon.state');
+
+// XDG Base Directory support
+const XDG_CONFIG = process.env.XDG_CONFIG_HOME || join(HOME, '.config');
+const XDG_STATE  = process.env.XDG_STATE_HOME  || join(HOME, '.local/state');
+const XDG_DATA   = process.env.XDG_DATA_HOME   || join(HOME, '.local/share');
+
+const CONFIG_DIR  = join(XDG_CONFIG, 'snake-rodeo');
+const STATE_DIR   = join(XDG_STATE,  'snake-rodeo');
+const DATA_DIR    = join(XDG_DATA,   'snake-rodeo');
+
+// Ensure dirs exist on first use (lazy, per-path)
+function ensureDir(dir) {
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+}
+
+const SETTINGS_FILE = join(CONFIG_DIR, 'settings.json');
+const PID_FILE      = join(STATE_DIR,  'daemon.pid');
+const LOG_FILE      = join(DATA_DIR,   'daemon.log');
+const STATE_FILE    = join(STATE_DIR,  'daemon.state');
+
+// Auth token file — populated by the user or trifle-auth skill explicitly.
+// The skill never reads from the host agent's internal workspace.
+const AUTH_FILE     = join(CONFIG_DIR, 'auth.json');
 
 export const PATHS = {
-  settings: SETTINGS_FILE,
-  pidFile: PID_FILE,
-  logFile: LOG_FILE,
+  settings:  SETTINGS_FILE,
+  pidFile:   PID_FILE,
+  logFile:   LOG_FILE,
   stateFile: STATE_FILE,
-  authState: join(HOME, '.openclaw/workspace/memory/trifle-auth-state.json'),
+  authFile:  AUTH_FILE,
+  // Expose dir helpers so callers can mkdirSync before writing
+  _dirs: { config: CONFIG_DIR, state: STATE_DIR, data: DATA_DIR, ensureDir },
 };
 
 export const SERVERS = {
@@ -85,6 +109,7 @@ export function loadSettings() {
  * Save settings to file
  */
 export function saveSettings(settings) {
+  ensureDir(CONFIG_DIR);
   // Only save non-default values
   const toSave = {};
   for (const [key, value] of Object.entries(settings)) {
@@ -162,6 +187,7 @@ export function loadDaemonState() {
  * Save daemon state
  */
 export function saveDaemonState(state) {
+  ensureDir(STATE_DIR);
   writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
 }
 

@@ -10,17 +10,27 @@ let tokenLoadedAt = 0;
 const TOKEN_CACHE_MS = 60000; // Reload token every minute
 
 /**
- * Load auth token from state file
+ * Load auth token — resolution order:
+ *   1. TRIFLE_AUTH_TOKEN env var (highest priority, explicit)
+ *   2. ~/.config/snake-rodeo/auth.json  { "token": "..." }
+ *      (populated by `snake auth login` or copied manually from trifle-auth)
+ *
+ * Never reads from host agent internals (~/.openclaw/...).
  */
 function loadToken() {
+  // 1. Environment variable — always authoritative
+  if (process.env.TRIFLE_AUTH_TOKEN) {
+    return process.env.TRIFLE_AUTH_TOKEN;
+  }
+
   const now = Date.now();
   if (cachedToken && (now - tokenLoadedAt) < TOKEN_CACHE_MS) {
     return cachedToken;
   }
 
   try {
-    if (existsSync(PATHS.authState)) {
-      const state = JSON.parse(readFileSync(PATHS.authState, 'utf8'));
+    if (existsSync(PATHS.authFile)) {
+      const state = JSON.parse(readFileSync(PATHS.authFile, 'utf8'));
       cachedToken = state?.token || null;
       tokenLoadedAt = now;
       return cachedToken;
