@@ -1,7 +1,7 @@
 ---
 name: rename-sessions
 description: Bulk rename Claude Code sessions with descriptive titles by reading session JSONL files and appending custom-title entries. Scans ALL project directories. Use when you want to organize and label past conversations.
-version: 1.1.0
+version: 2.0.0
 metadata:
   clawdhub:
     emoji: "🏷️"
@@ -41,10 +41,17 @@ The script automatically:
 - Scans ALL project directories in `~/.claude/projects/`
 - Skips sessions that already have a custom title
 - Skips sessions with no meaningful user content (e.g., just `/clear` or meta commands)
-- Extracts the first meaningful user message from each session
-- Generates a concise title (under 60 chars) by cleaning and truncating the first sentence
+- Generates semantic titles using `claude -p --model haiku` (concurrent workers for speed)
+- Falls back to heuristic first-sentence extraction if the CLI is unavailable
 - Appends a `custom-title` entry to the session's JSONL file
 - Reports what was renamed and what was skipped
+
+Options:
+```bash
+python3 rename_sessions.py --dry-run      # preview without writing
+python3 rename_sessions.py --limit 10     # only process first 10 untitled sessions
+python3 rename_sessions.py --workers 8    # use 8 concurrent claude calls (default: 5)
+```
 
 ### 2. Verify
 
@@ -52,20 +59,16 @@ Run `/resume` in Claude Code to see the updated session names in the picker.
 
 ## How Title Generation Works
 
-The script extracts the first real user message (skipping commands, meta/XML wrappers, and short content), then:
+The script uses a tiered approach for generating semantic titles:
 
-1. Strips HTML/XML tags, markdown code blocks, URLs, and long file paths
-2. Splits on sentence boundaries and takes the first sentence ≥ 10 chars
-3. Truncates to 60 chars at a word boundary
-4. Capitalizes the first letter
+### Tier 1: Compact Summaries (best quality)
+When Claude Code auto-compacts a long conversation, it stores a rich summary in the JSONL file (`isCompactSummary: true`). These summaries contain structured analysis of the entire session. The script extracts this summary and sends it to `claude -p --model haiku` to generate a concise title.
 
-Examples:
-| Content | Generated Title |
-|---|---|
-| "fix the leaderboard query, it's too slow" | Fix the leaderboard query, it's too slow |
-| "add solana wallet authentication" | Add solana wallet authentication |
-| "figure out why this snake game error happened" | Figure out why this snake game error happened |
-| "review PR #291 comments" | Review PR #291 comments |
+### Tier 2: LLM from Messages (good quality)
+For non-compacted sessions, the script gathers the first few user messages, the first assistant response, and the git branch name, then sends this context to `claude -p --model haiku` for title generation.
+
+### Tier 3: Heuristic Fallback (basic)
+If the Claude CLI fails or is unavailable, falls back to extracting and cleaning the first sentence of the first user message.
 
 ## Manual Renaming
 
