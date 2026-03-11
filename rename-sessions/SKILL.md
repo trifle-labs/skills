@@ -1,7 +1,7 @@
 ---
 name: rename-sessions
 description: Bulk rename Claude Code sessions with descriptive titles by reading session JSONL files and appending custom-title entries. Scans ALL project directories. Use when you want to organize and label past conversations.
-version: 2.0.0
+version: 1.1.0
 metadata:
   clawdhub:
     emoji: "🏷️"
@@ -46,11 +46,14 @@ The script automatically:
 - Appends a `custom-title` entry to the session's JSONL file
 - Reports what was renamed and what was skipped
 
+> **Privacy & security:** When generating semantic titles, relevant session content is sent to the Claude CLI for summarization, which may transmit data off-device depending on your CLI configuration (e.g., API endpoint and credentials). If you prefer not to send any session content to the Claude CLI, use the `--heuristic-only` option to force local heuristic-only title generation.
+
 Options:
 ```bash
-python3 rename_sessions.py --dry-run      # preview without writing
-python3 rename_sessions.py --limit 10     # only process first 10 untitled sessions
-python3 rename_sessions.py --workers 8    # use 8 concurrent claude calls (default: 5)
+python3 rename_sessions.py --dry-run         # preview without writing
+python3 rename_sessions.py --limit 10        # only process first 10 untitled sessions
+python3 rename_sessions.py --workers 8       # use 8 concurrent claude calls (default: 5)
+python3 rename_sessions.py --heuristic-only  # never call `claude -p`; use heuristic titles only
 ```
 
 ### 2. Verify
