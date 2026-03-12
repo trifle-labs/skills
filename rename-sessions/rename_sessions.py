@@ -14,12 +14,15 @@ Usage:
     python3 rename_sessions.py --dry-run    # preview without writing
     python3 rename_sessions.py --limit 5    # only process first 5 untitled sessions
     python3 rename_sessions.py --workers 8  # use 8 concurrent claude calls (default: 5)
+    python3 rename_sessions.py --heuristic-only  # never call claude -p; use heuristic titles only
 """
 
+import argparse
 import json
 import os
 import re
 import glob
+import shutil
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -41,13 +44,7 @@ for candidate in [
         CLAUDE_BIN = candidate
         break
 if not CLAUDE_BIN:
-    try:
-        result = subprocess.run(['which', 'claude'], capture_output=True,
-                                text=True, env=CLEAN_ENV)
-        if result.returncode == 0:
-            CLAUDE_BIN = result.stdout.strip()
-    except FileNotFoundError:
-        pass
+    CLAUDE_BIN = shutil.which('claude')
 
 
 def extract_message_content(obj):
@@ -96,40 +93,50 @@ def parse_session(filepath):
     assistant_messages = []
     has_title = False
 
-    with open(filepath, 'r') as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                obj = json.loads(line)
-            except json.JSONDecodeError:
-                continue
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
 
-            entry_type = obj.get('type', '')
+                entry_type = obj.get('type', '')
 
-            if entry_type == 'custom-title':
-                has_title = True
-                break
+                if entry_type == 'custom-title':
+                    has_title = True
+                    break
 
-            if not git_branch and obj.get('gitBranch'):
-                git_branch = obj['gitBranch']
+                if not git_branch and obj.get('gitBranch'):
+                    git_branch = obj['gitBranch']
 
-            if obj.get('isCompactSummary'):
-                compact_summary = extract_message_content(obj)
-                continue
+                if obj.get('isCompactSummary'):
+                    compact_summary = extract_message_content(obj)
+                    continue
 
-            if entry_type == 'user':
-                msg = obj.get('message', {})
-                if msg.get('role') == 'user':
+                if entry_type == 'user':
+                    msg = obj.get('message', {})
+                    if msg.get('role') == 'user':
+                        content = extract_message_content(obj)
+                        if not is_skip_message(obj, content):
+                            user_messages.append(content)
+
+                if entry_type == 'assistant' and len(assistant_messages) < 2:
                     content = extract_message_content(obj)
-                    if not is_skip_message(obj, content):
-                        user_messages.append(content)
-
-            if entry_type == 'assistant' and len(assistant_messages) < 2:
-                content = extract_message_content(obj)
-                if content.strip() and len(content.strip()) > 20:
-                    assistant_messages.append(content)
+                    if content.strip() and len(content.strip()) > 20:
+                        assistant_messages.append(content)
+    except (OSError, UnicodeDecodeError) as e:
+        print(f"Warning: failed to read session file {filepath}: {e}", file=sys.stderr)
+        return {
+            'compact_summary': None,
+            'git_branch': None,
+            'user_messages': [],
+            'assistant_messages': [],
+            'has_title': False,
+        }
 
     return {
         'has_title': has_title,
@@ -220,14 +227,15 @@ def get_session_id(filepath):
     return os.path.splitext(os.path.basename(filepath))[0]
 
 
-def process_session(filepath, dry_run=False):
+def process_session(filepath, dry_run=False, heuristic_only=False, parsed=None):
     """Process a single session file. Returns (short_project, session_id, title, source) or None."""
     session_id = get_session_id(filepath)
     project = os.path.basename(os.path.dirname(filepath))
     short_project = re.sub(r'^-Users-\w+-GitHub-', '', project)
     short_project = re.sub(r'^-Users-\w+-', '~/', short_project)
 
-    parsed = parse_session(filepath)
+    if parsed is None:
+        parsed = parse_session(filepath)
 
     if parsed['has_title']:
         return ('skip_title', short_project, session_id, None, None)
@@ -240,7 +248,7 @@ def process_session(filepath, dry_run=False):
     title = None
     source = None
 
-    if context:
+    if context and not heuristic_only:
         title = generate_title_via_claude(context)
         if title:
             source = "compact" if parsed['compact_summary'] else "llm"
@@ -267,28 +275,43 @@ def process_session(filepath, dry_run=False):
     return ('renamed', short_project, session_id, title, source)
 
 
+def positive_int(value):
+    """Validate that value is a positive integer."""
+    try:
+        ivalue = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not an integer")
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError(f"{value} must be a positive integer")
+    return ivalue
+
+
 def parse_args():
     """Parse command line arguments."""
-    dry_run = '--dry-run' in sys.argv
-    workers = 5
-    limit = None
-
-    for i, arg in enumerate(sys.argv):
-        if arg == '--workers' and i + 1 < len(sys.argv):
-            workers = int(sys.argv[i + 1])
-        if arg == '--limit' and i + 1 < len(sys.argv):
-            limit = int(sys.argv[i + 1])
-
-    return dry_run, workers, limit
+    parser = argparse.ArgumentParser(
+        description="Bulk rename Claude Code sessions with semantic titles."
+    )
+    parser.add_argument('--dry-run', action='store_true',
+                        help="Preview renames without writing any files")
+    parser.add_argument('--workers', type=positive_int, default=5, metavar='N',
+                        help="Number of concurrent claude calls (default: 5)")
+    parser.add_argument('--limit', type=positive_int, default=None, metavar='N',
+                        help="Only process the first N untitled sessions")
+    parser.add_argument('--heuristic-only', action='store_true',
+                        help="Never call 'claude -p'; use heuristic titles only")
+    args = parser.parse_args()
+    return args.dry_run, args.workers, args.limit, args.heuristic_only
 
 
 def main():
-    dry_run, workers, limit = parse_args()
+    dry_run, workers, limit, heuristic_only = parse_args()
 
     if dry_run:
         print("=== DRY RUN (no files will be modified) ===\n")
 
-    if CLAUDE_BIN:
+    if heuristic_only:
+        print("Heuristic-only mode: claude -p will not be called")
+    elif CLAUDE_BIN:
         print(f"Using claude CLI: {CLAUDE_BIN}")
         print(f"Concurrent workers: {workers}")
     else:
@@ -301,8 +324,10 @@ def main():
 
     print(f"Found {len(session_files)} session files across all projects\n")
 
-    # Pre-filter to find sessions that need renaming (fast, no LLM calls)
+    # Pre-filter to find sessions that need renaming (fast, no LLM calls).
+    # Cache parsed results to avoid re-reading files in worker threads.
     to_process = []
+    parsed_cache = {}
     skipped_has_title = 0
     skipped_no_content = 0
 
@@ -314,6 +339,7 @@ def main():
             skipped_no_content += 1
         else:
             to_process.append(filepath)
+            parsed_cache[filepath] = parsed
 
     if limit:
         to_process = to_process[:limit]
@@ -334,7 +360,7 @@ def main():
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {
-            pool.submit(process_session, fp, dry_run): fp
+            pool.submit(process_session, fp, dry_run, heuristic_only, parsed_cache.get(fp)): fp
             for fp in to_process
         }
 
